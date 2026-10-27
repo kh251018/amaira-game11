@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amaira Boutique - Memory Matching Game</title>
+  
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            boutique: {
+              purple: '#2A1B3D',
+              deepPurple: '#1A0F29',
+              darkViolet: '#44318D',
+              roseGold: '#E8B4B8',
+              gold: '#D4AF37',
+              softPink: '#F9F1F0',
+              cream: '#FAF6F0',
+              cardDark: '#231534'
+            }
+          },
+          fontFamily: {
+            serif: ['Playfair Display', 'serif'],
+            sans: ['Poppins', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom CSS for 3D Card Flip Animation */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+
+    .card-inner.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+
+    .card-front {
+      transform: rotateY(0deg);
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Glow effect for matched cards */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(212, 175, 55, 0.8); }
+    }
+
+    .matched-card {
+      animation: pulseGlow 2s infinite;
+    }
+  </style>
+</head>
+<body class="bg-boutique-deepPurple font-sans text-boutique-softPink min-h-screen flex flex-col justify-between selection:bg-boutique-roseGold selection:text-boutique-purple">
+
+  <!-- Background Decorative Accents -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
+    <div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-boutique-roseGold blur-3xl"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-boutique-darkViolet blur-3xl"></div>
+  </div>
+
+  <!-- Header & Scoreboard Section -->
+  <header class="relative z-10 pt-6 pb-4 px-4 sm:px-8 border-b border-boutique-roseGold/20 bg-boutique-purple/80 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Title & Branding -->
+      <div class="text-center md:text-left">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-boutique-gold/10 border border-boutique-gold/30 text-boutique-gold text-xs font-semibold uppercase tracking-wider mb-1">
+          <i class="fa-solid fa-gem"></i> Units 21 & 22 Presentation
+        </div>
+        <h1 class="font-serif text-3xl sm:text-4xl font-bold text-white tracking-wide">
+          Amaira Boutique <span class="text-boutique-roseGold font-normal italic">Memory Game</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-boutique-softPink/70 font-light">
+          Match 12 pairs of cards and test your technical project knowledge!
+        </p>
+      </div>
+
+      <!-- Stats Bar & Reset Button -->
+      <div class="flex items-center gap-4 sm:gap-6 bg-boutique-darkViolet/90 border border-boutique-roseGold/30 px-5 py-3 rounded-2xl shadow-xl">
+        
+        <!-- Matches Counter -->
+        <div class="text-center">
+          <span class="block text-xs uppercase tracking-wider text-boutique-roseGold/80 font-medium">Matches Found</span>
+          <span id="matches-count" class="font-serif text-2xl font-bold text-boutique-gold">0 / 12</span>
+        </div>
+
+        <div class="h-8 w-px bg-boutique-roseGold/20"></div>
+
+        <!-- Moves Counter -->
+        <div class="text-center">
+          <span class="block text-xs uppercase tracking-wider text-boutique-roseGold/80 font-medium">Moves</span>
+          <span id="moves-count" class="font-serif text-2xl font-bold text-white">0</span>
+        </div>
+
+        <div class="h-8 w-px bg-boutique-roseGold/20"></div>
+
+        <!-- Reset Game Button -->
+        <button onclick="resetGame()" class="group relative px-4 py-2 rounded-xl bg-gradient-to-r from-boutique-gold to-boutique-roseGold text-boutique-deepPurple font-semibold text-sm shadow-md hover:brightness-110 active:scale-95 transition-all duration-200 flex items-center gap-2">
+          <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform duration-500"></i>
+          <span>Reset Game</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Game Canvas / Grid Container -->
+  <main class="relative z-10 flex-grow flex items-center justify-center p-4 sm:p-6">
+    <div class="w-full max-w-6xl">
+      <!-- 24-Card Grid Responsive Layout -->
+      <div id="game-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4 max-w-5xl mx-auto">
+        <!-- Cards generated dynamically via JavaScript -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 py-4 px-6 text-center text-xs text-boutique-softPink/50 border-t border-boutique-roseGold/10">
+    <p>Amaira Boutique E-Commerce Project &bull; Technical Instruction Memory Challenge</p>
+  </footer>
+
+  <!-- Question Modal Popup -->
+  <div id="question-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-boutique-deepPurple/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="modal-card" class="bg-boutique-purple border-2 border-boutique-gold/50 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl transform scale-90 transition-transform duration-300 relative overflow-hidden">
+      
+      <!-- Decorative Top Glow -->
+      <div id="modal-header-bg" class="absolute top-0 left-0 right-0 h-3 bg-boutique-gold"></div>
+
+      <!-- Icon & Pair Title -->
+      <div class="flex items-center gap-3 mb-4 pt-2">
+        <div id="modal-pair-badge" class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg border border-white/20">
+          <i id="modal-pair-icon" class="fa-solid fa-heart"></i>
+        </div>
+        <div>
+          <span id="modal-pair-name" class="text-xs uppercase tracking-widest font-semibold text-boutique-roseGold">Match Found!</span>
+          <h2 id="modal-pair-title" class="font-serif text-xl sm:text-2xl font-bold text-white">Pair Unlocked</h2>
+        </div>
+      </div>
+
+      <!-- Question Box -->
+      <div class="bg-boutique-deepPurple/60 border border-boutique-roseGold/20 rounded-2xl p-5 mb-5 shadow-inner">
+        <p class="text-xs text-boutique-gold uppercase tracking-wider font-semibold mb-1">
+          <i class="fa-solid fa-circle-question mr-1"></i> Technical Question
+        </p>
+        <p id="modal-question-text" class="text-base sm:text-lg font-medium text-white leading-relaxed">
+          Question text goes here?
+        </p>
+      </div>
+
+      <!-- Answer Box (Hidden initially) -->
+      <div id="modal-answer-box" class="hidden bg-emerald-950/50 border border-emerald-500/40 rounded-2xl p-5 mb-5 transition-all">
+        <p class="text-xs text-emerald-400 uppercase tracking-wider font-semibold mb-1">
+          <i class="fa-solid fa-circle-check mr-1"></i> Correct Answer
+        </p>
+        <p id="modal-answer-text" class="text-base sm:text-lg font-bold text-emerald-200 leading-relaxed">
+          Answer text goes here.
+        </p>
+      </div>
+
+      <!-- Modal Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3 mt-2">
+        <button id="show-answer-btn" onclick="revealAnswer()" class="flex-1 py-3 px-4 rounded-xl bg-boutique-gold/20 border border-boutique-gold text-boutique-gold font-semibold text-sm hover:bg-boutique-gold hover:text-boutique-deepPurple transition-all duration-200 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-eye"></i>
+          <span>Show Answer</span>
+        </button>
+
+        <button onclick="closeModal()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-boutique-roseGold to-boutique-gold text-boutique-deepPurple font-bold text-sm shadow-lg hover:brightness-110 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
+          <span>Continue</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- End-of-Game Celebration Modal -->
+  <div id="completion-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-boutique-deepPurple/90 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-boutique-purple border-2 border-boutique-gold w-full max-w-md rounded-3xl p-8 text-center shadow-2xl relative">
+      
+      <div class="w-20 h-20 rounded-full bg-boutique-gold/20 border-2 border-boutique-gold text-boutique-gold mx-auto flex items-center justify-center text-4xl mb-4 shadow-lg animate-bounce">
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+
+      <h2 class="font-serif text-3xl font-bold text-white mb-2">Great Job!</h2>
+      <p class="text-boutique-roseGold text-sm mb-6">You matched all 12 pairs and reviewed the technical details for Amaira Boutique!</p>
+
+      <div class="bg-boutique-deepPurple/70 rounded-2xl p-4 mb-6 border border-boutique-roseGold/20 flex justify-around">
+        <div>
+          <span class="block text-xs text-boutique-softPink/60">Total Moves</span>
+          <span id="final-moves" class="font-serif text-2xl font-bold text-boutique-gold">0</span>
+        </div>
+        <div class="w-px bg-boutique-roseGold/20"></div>
+        <div>
+          <span class="block text-xs text-boutique-softPink/60">Matches</span>
+          <span class="font-serif text-2xl font-bold text-emerald-400">12 / 12</span>
+        </div>
+      </div>
+
+      <button onclick="resetGame(); closeCompletionModal();" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-boutique-gold to-boutique-roseGold text-boutique-deepPurple font-bold text-sm shadow-xl hover:brightness-110 transition-all">
+        Play Again
+      </button>
+
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // 12 Exact Pairs Definitions - Updated with E-Commerce / Online Shopping Questions
+    const pairDefinitions = [
+      {
+        id: 'pink',
+        name: 'Pink Pair',
+        colorClass: 'bg-pink-500',
+        borderClass: 'border-pink-300',
+        icon: 'fa-heart',
+        question: 'What is the main goal of the Amaira Boutique website?',
+        answer: 'To provide a simple and elegant online fashion shopping experience.'
+      },
+      {
+        id: 'purple',
+        name: 'Purple Pair',
+        colorClass: 'bg-purple-600',
+        borderClass: 'border-purple-300',
+        icon: 'fa-house',
+        question: 'What features are included on the Amaira Boutique Home Page?',
+        answer: 'Image sliders/carousels, New Arrivals, and Seasonal Collections.'
+      },
+      {
+        id: 'blue',
+        name: 'Blue Pair',
+        colorClass: 'bg-blue-500',
+        borderClass: 'border-blue-300',
+        icon: 'fa-magnifying-glass',
+        question: 'How do customers find specific clothes in the store?',
+        answer: 'By using the quick Search Bar and Category filters.'
+      },
+      {
+        id: 'gold',
+        name: 'Gold Pair',
+        colorClass: 'bg-amber-400',
+        borderClass: 'border-amber-200',
+        icon: 'fa-circle-info',
+        question: 'What details are shown on the Product Details page?',
+        answer: 'Product images, available sizes, colors, price, and stock status.'
+      },
+      {
+        id: 'green',
+        name: 'Green Pair',
+        colorClass: 'bg-green-500',
+        borderClass: 'border-green-300',
+        icon: 'fa-lock',
+        question: 'What happens when a customer enters an incorrect password?',
+        answer: 'The login system displays a clear error message.'
+      },
+      {
+        id: 'red',
+        name: 'Red Pair',
+        colorClass: 'bg-red-600',
+        borderClass: 'border-red-300',
+        icon: 'fa-cart-shopping',
+        question: 'What can users do inside the Shopping Cart?',
+        answer: 'Add products, change item quantities, review totals, and proceed to checkout.'
+      },
+      {
+        id: 'orange',
+        name: 'Orange Pair',
+        colorClass: 'bg-orange-500',
+        borderClass: 'border-orange-300',
+        icon: 'fa-hand-pointer',
+        question: 'How does Amaira Boutique ensure good Usability for shoppers?',
+        answer: 'By offering simple navigation, clear text, and readable fonts.'
+      },
+      {
+        id: 'cyan',
+        name: 'Cyan Pair',
+        colorClass: 'bg-cyan-500',
+        borderClass: 'border-cyan-300',
+        icon: 'fa-mobile-screen',
+        question: 'What makes the website Responsive across devices?',
+        answer: 'It adjusts its layout to work perfectly on Mobile, Tablet, and Desktop screens.'
+      },
+      {
+        id: 'silver',
+        name: 'Silver Pair',
+        colorClass: 'bg-slate-400',
+        borderClass: 'border-slate-200',
+        icon: 'fa-diagram-project',
+        question: 'What is shown in the Activity Diagram for buying an item?',
+        answer: 'Search product → Select size → Add to cart → Login → Checkout.'
+      },
+      {
+        id: 'brown',
+        name: 'Brown Pair',
+        colorClass: 'bg-amber-800',
+        borderClass: 'border-amber-600',
+        icon: 'fa-user-shield',
+        question: 'How does the store protect customer accounts and passwords?',
+        answer: 'Through secure login authentication and data privacy rules.'
+      },
+      {
+        id: 'emerald',
+        name: 'Emerald Pair',
+        colorClass: 'bg-emerald-600',
+        borderClass: 'border-emerald-300',
+        icon: 'fa-gem',
+        question: 'What visual elements appear consistently on every page?',
+        answer: 'The official Amaira Boutique logo and main navigation menu.'
+      },
+      {
+        id: 'indigo',
+        name: 'Indigo Pair',
+        colorClass: 'bg-indigo-600',
+        borderClass: 'border-indigo-300',
+        icon: 'fa-bag-shopping',
+        question: 'What similar e-commerce app was reviewed to improve Amaira Boutique?',
+        answer: 'The Ounass shopping application.'
+      }
+    ];
+
+    // State Variables
+    let cards = [];
+    let flippedCards = [];
+    let matchesCount = 0;
+    let movesCount = 0;
+    let isProcessing = false;
+
+    // DOM Elements
+    const gameGrid = document.getElementById('game-grid');
+    const matchesCountEl = document.getElementById('matches-count');
+    const movesCountEl = document.getElementById('moves-count');
+    const questionModal = document.getElementById('question-modal');
+    const completionModal = document.getElementById('completion-modal');
+
+    // Initialize Game Deck
+    function initGame() {
+      let cardDeck = [];
+      pairDefinitions.forEach(pair => {
+        cardDeck.push({ ...pair, cardId: pair.id + '_1' });
+        cardDeck.push({ ...pair, cardId: pair.id + '_2' });
+      });
+
+      // Shuffle Cards
+      cards = cardDeck.sort(() => Math.random() - 0.5);
+
+      // Reset State
+      matchesCount = 0;
+      movesCount = 0;
+      flippedCards = [];
+      isProcessing = false;
+      matchesCountEl.innerText = `0 / 12`;
+      movesCountEl.innerText = `0`;
+
+      renderGrid();
+    }
+
+    // Render HTML Grid
+    function renderGrid() {
+      gameGrid.innerHTML = '';
+      cards.forEach((card, index) => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'aspect-[4/5] perspective-1000 cursor-pointer select-none';
+        cardElement.setAttribute('onclick', `handleCardClick(${index})`);
+
+        cardElement.innerHTML = `
+          <div id="card-inner-${index}" class="card-inner">
+            <!-- Front Face (Hidden Card) -->
+            <div class="card-front bg-boutique-cardDark border-2 border-boutique-roseGold/30 hover:border-boutique-gold/80 rounded-2xl flex flex-col items-center justify-center p-2 shadow-lg transition-all duration-300 group">
+              <div class="w-10 h-10 rounded-full bg-boutique-purple/80 border border-boutique-roseGold/20 flex items-center justify-center text-boutique-gold group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-crown text-sm"></i>
+              </div>
+              <span class="text-[10px] uppercase tracking-widest text-boutique-softPink/40 font-semibold mt-2">Amaira</span>
+            </div>
+
+            <!-- Back Face (Revealed Card) -->
+            <div class="card-back ${card.colorClass} border-2 ${card.borderClass} rounded-2xl flex flex-col items-center justify-center p-3 text-white shadow-2xl">
+              <i class="fa-solid ${card.icon} text-3xl sm:text-4xl mb-2 filter drop-shadow-md"></i>
+              <span class="text-xs font-bold tracking-wider uppercase text-white drop-shadow">${card.name}</span>
+            </div>
+          </div>
+        `;
+        gameGrid.appendChild(cardElement);
+      });
+    }
+
+    // Handle Card Click Logic
+    function handleCardClick(index) {
+      if (isProcessing) return;
+
+      const cardInner = document.getElementById(`card-inner-${index}`);
+      if (cardInner.classList.contains('flipped')) return;
+
+      // Flip card
+      cardInner.classList.add('flipped');
+      flippedCards.push({ index, data: cards[index] });
+
+      if (flippedCards.length === 2) {
+        movesCount++;
+        movesCountEl.innerText = movesCount;
+        isProcessing = true;
+
+        const [card1, card2] = flippedCards;
+
+        if (card1.data.id === card2.data.id) {
+          // Match Found
+          matchesCount++;
+          matchesCountEl.innerText = `${matchesCount} / 12`;
+
+          setTimeout(() => {
+            document.getElementById(`card-inner-${card1.index}`).parentElement.classList.add('matched-card');
+            document.getElementById(`card-inner-${card2.index}`).parentElement.classList.add('matched-card');
+
+            openQuestionModal(card1.data);
+            
+            flippedCards = [];
+            isProcessing = false;
+
+            if (matchesCount === 12) {
+              setTimeout(openCompletionModal, 1000);
+            }
+          }, 400);
+
+        } else {
+          // No Match - Flip back
+          setTimeout(() => {
+            document.getElementById(`card-inner-${card1.index}`).classList.remove('flipped');
+            document.getElementById(`card-inner-${card2.index}`).classList.remove('flipped');
+            flippedCards = [];
+            isProcessing = false;
+          }, 1100);
+        }
+      }
+    }
+
+    // Open Question Modal
+    function openQuestionModal(pairData) {
+      document.getElementById('modal-header-bg').className = `absolute top-0 left-0 right-0 h-3 ${pairData.colorClass}`;
+      document.getElementById('modal-pair-badge').className = `w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg border border-white/20 ${pairData.colorClass} text-white`;
+      document.getElementById('modal-pair-icon').className = `fa-solid ${pairData.icon}`;
+      document.getElementById('modal-pair-name').innerText = pairData.name + ' Matched!';
+      document.getElementById('modal-pair-title').innerText = pairData.name + ' Question';
+      document.getElementById('modal-question-text').innerText = pairData.question;
+      document.getElementById('modal-answer-text').innerText = pairData.answer;
+
+      document.getElementById('modal-answer-box').classList.add('hidden');
+      document.getElementById('show-answer-btn').classList.remove('hidden');
+
+      questionModal.classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('modal-card').classList.remove('scale-90');
+      document.getElementById('modal-card').classList.add('scale-100');
+    }
+
+    // Reveal Answer Button
+    function revealAnswer() {
+      document.getElementById('modal-answer-box').classList.remove('hidden');
+      document.getElementById('show-answer-btn').classList.add('hidden');
+    }
+
+    // Close Question Modal
+    function closeModal() {
+      document.getElementById('modal-card').classList.remove('scale-100');
+      document.getElementById('modal-card').classList.add('scale-90');
+      questionModal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    // Open & Close End-Game Celebration Modal
+    function openCompletionModal() {
+      document.getElementById('final-moves').innerText = movesCount;
+      completionModal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeCompletionModal() {
+      completionModal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    // Reset Game Function
+    function resetGame() {
+      closeModal();
+      closeCompletionModal();
+      initGame();
+    }
+
+    // Initialize Game on Load
+    window.onload = function() {
+      initGame();
+    };
+  </script>
+</body>
+</html>
